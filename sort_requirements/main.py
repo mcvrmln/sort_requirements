@@ -23,23 +23,22 @@ def find_children(df: pd.DataFrame, parent: str, grandparents:str) -> pd.DataFra
     """
     
     """
-    df_children = df[df['parent_id']==parent]
-    
-
+ 
     if len(grandparents) > 0:
         sep = '_'
     else:
         sep = ''
 
     grandparents = f'{grandparents}{sep}{parent}'
-    df_children = df_children.assign(long_id=lambda x: (f"{grandparents}{sep}{str(x['id'])}"))
-
-    if len(df_children) > 0:
-        for index, row in df_children.iterrows():
-            print(f"{grandparents} has child {row['id']}: {row['description']}")
-            pd.concat([df_children, find_children(df, row.id, grandparents)], ignore_index=True)
+    sep = '_' 
+    mask = df['parent_id']==parent
+    df.loc[mask, 'long_id'] = df.apply(lambda row : f"{grandparents}{sep}{str(row['id'])}", axis = 1)
+ 
+    if len(df.loc[mask,]) > 0:
+        for index, row in df.loc[mask,].iterrows():
+            find_children(df, row.id, grandparents)
     
-    return df_children
+    return df
 
 
 
@@ -50,11 +49,10 @@ def run_app():
     df = read_data()
     if len(df) == df.id.nunique():
         print('Only unique keys!')
-        sorted_df = df[df['id']=='AA']
-        sorted_df['long_id'] = None
-        temp_df = find_children(df, 'AA', '')
-        pd.concat([sorted_df, temp_df], ignore_index=True)
-        print(temp_df.head(10))
+        mask = df['id'].str.fullmatch('AA')
+        df.loc[mask, 'long_id'] = 'Base'
+        find_children(df, 'AA', '')
+        print(df.head(10))
     else: 
         print('Dataset contains a not unique key (id)!')
 
